@@ -1,52 +1,55 @@
 # Graphing functions with Julia
 
+## Introduction
 
-```{hide=true, display=false, results="none"}
-using Weave
-tabs = tabbable()
-```
-
-```{hide=true, results="js"}
-using Gadfly
-```
-
-
-```{results="html"}
-tabs.start()
-tabs.next("Introduction")
-```
-
-
-
-The `julia` language is a new language and as such, certain design
+The `Julia` language is a new language and as such, certain design
 decisions are still being made. One key decision is the interface for
-creating graphics. At this point there are many different
-ones (`Winston`, `Gadfly`, `Gaston`, `PyPlot`, plotly, ...), and perhaps more will be
-generated before a dominant one is arrived at. As such, we don't try
-to teach the details of any one of them. 
+creating graphics. At this point there are many different ones
+(`Winston`, `Gadfly`, `Gaston`, `PyPlot`, plotly, plotlyjs, `GR`...),
+and perhaps more will be generated before a dominant one is arrived
+at. As such, we don't try to teach the details of any one of them.
 
-That being said, we can do all we need with the easy-to-use `plot`
-function from the `Gadfly` package.
+Rather, we use the `Plots` package which provides a unified interface
+to many backend plotting pacakges. This package is loaded when the
+`MTH229` package is.
+
+```
+note("""Packages are described a bit more [here](http://mth229.github.io/index.html/#_packages_).""")
+```
 
 For the impatient, this is all that is needed to know to get up and running.
 
-First you must load the package (which can take some time)
 
 ```
-using Gadfly			# provides the plot function
+using MTH229  # to load Plots
+```
+
+```nocode, noout
+plotly()
 ```
 
 
-Graphing a function as easy as specifying the function and the domain to graph over,
+Then, graphing a function is as easy as specifying the function and the domain to graph over,
 e.g.:
 
-```{results="block"}
+```
 f(x) = exp(-x^2/2)
 plot(f, -3, 3) 			# plot f over [-3,3]
 ```
 
 
-Graphing two or more functions is done by combining them together into a container of functions using `[]`:
+Graphs can be layered by using the `plot!` function (with an exclamation point indicating a current graph is begin modified):
+
+```
+f(x) = cos(x)
+g(x) = 1 - x^2/2
+plot(f, -pi/2, pi/2)
+plot!(g)        #  the domain to plot is optional if adding a layer
+```
+
+
+
+Graphing two or more functions can also be done by combining two together into a container of functions using `[]`:
 
 
 ```
@@ -61,52 +64,31 @@ details including how to specify a graph by defining the points that
 are used to make the plot.
 
 
-```{results="html"}
-tabs.next("Gadfly")
-```
-
-## The plot function of Gadfly
-
-### Using a package
-
-Within each session you must first bring the package features into
-your workspace with the `using` command. Here is how we load the `Gadfly`
-package which will draw our graphics:
-
-```
-using Gadfly
-```
-
-
-If you wanted to use `Winston`'s graphics, then the command would be
-`using Winston`.
-
-Packages are described a bit more [here](http://mth229.github.io/index.html/#_packages_).
-
-
-### Actually plotting
+## The plot function 
 
 The most basic usage for plotting a function follows this pattern:
 
-```{execute=false}
-plot(function_object, from, to)
+```verbatim
+plot(function_object, from, to)     # or plot(f, a, b)
 ```
 
 as in
 
-```{results="block"}
+```
 plot(sin, 0, 2pi)
 ```
 
-That creates the graphic. If you are working within `IJulia` it will
-be automatically displayed as an `SVG` file that allows you to zoom
-and pan with the mouse. The size of the graphics produced can be
-adjusted through a command like: `set_default_plot_size(9inch, 6inch)`.
+
+
+That creates the graphic. The `Plots` package is an interface to several plotting "backends."
+Within `IJulia` and using `plotly()` the graph will
+be automatically displayed as an `SVG` graphic that allows you to zoom
+and pan with the mouse.
 
 
 
 
-```{results="html"}
+```
 alert("""
 
 This is another example of a general template **action(function_object,
@@ -122,29 +104,45 @@ and the additional *args...* indicate the domain to plot over.)
 
 Again, we plot a function, this time a basic polynomial:
 
-```{results="block"}
+```
 f(x) = x^2 - 2x + 2
 plot(f, -3, 3) 
 ```
 
+### Adding layers using "plot!"
 
+A graph can have layers added to it using `plot!` or other such functions. For example, adding the function `zero` will emphasize the `x` axis:
+
+```
+f(x) = x^2 - 2x + 2
+plot(f, -3, 3)
+plot!(zero)     # x axis
+```
+
+The automatic legend can be supressed by passing the argument `legend=false` to the initial `plot` command.
+
+Adding points can be done with the `scatter!` command. We put the `x` and `y` values into containers defined by `[]`. For example, the polynomial $x^2 - 3x +2$ has roots at $2$ and $1$, we emphasize this through:
+
+```
+f(x) = x^2 - 3x + 2
+rts = [1, 2]
+plot(f, 0, 3)
+scatter!(rts, [0, 0])
+```
 
 
 ### Inf, NaN values
 
-`Gadfly` plots functions by creating about 250 paired points $(x,
-f(x))$, plots these, then connects the points with line segments. In
-the 250 function evaluations, it is of course quite possible that some
+`Plots` plots functions by creating a large number of paired points $(x,
+f(x))$; it then plots these points; and, finally, connects the points with line segments. In
+the numerous function evaluations, it is of course quite possible that some
 of the points will return `Inf` or `NaN`. (Where `Inf` is a floating
 point value for infinity and results from evaluations like `1/0` and
-`NaN` stands for non a number, and results from indeterminate
+`NaN` stands for "not a number", and results from indeterminate
 evaluations such as `0/0`.)
 
-The values which are `Inf` can not reasonably be plotted and when
-encountered `Gadfly` will issue a `BoundsError`, as in the value is
-out of bounds.
-
-Values which are `NaN` are treated differently. Such points are simply
+The values which are `Inf` can not reasonably be plotted. Values 
+which are `NaN` can not reasonably plotted. What to do? Such points are simply
 not plotted, and no line segments are drawn causing the plot to be
 discontinuous. This convention can be utilized to good effect.
 
@@ -161,7 +159,7 @@ trim(f; val=10) = x -> abs(f(x)) > val ? NaN : f(x)
 Using `trim` is fairly simple. The output 
 is a function, so can be passed directly to the `plot` call:
 
-```{results="block"}
+```
 f(x) = 1/x
 plot(trim(f), -3, 3)
 ```
@@ -177,7 +175,7 @@ Consider a function with a parameter, `theta`, defined by:
 ```
 function g(x; theta=pi/4)
 	 a = 200*cos(theta)
-	 tan(theta)*x + (32/a)*x  b*log((a-x)/a)
+	 tan(theta)*x + (32/a)*x - 32*log(a/(a-x))
 end
 ```
 
@@ -200,6 +198,7 @@ There are many instances where plotting with anonymous functions are
 convenient. It can be hard to get used to seeing that arrow, but it
 can simplify many expressions if used properly.
 
+
 ### Practice
 
 
@@ -207,7 +206,7 @@ can simplify many expressions if used properly.
 
 Plot the function $f(x) = x^3 - x$ over $[-2,2]$. How many zeros are there? 
 
-```{results="js"}
+```
 val = 3;
 numericq(val, 1e-16)
 ```
@@ -218,7 +217,7 @@ numericq(val, 1e-16)
 
 Plot the function $f(x) = x^3 - x$. When is the function positive?
 
-```{results="js"}
+```
 choices = ["`(-Inf, -1)` and `(0,1)`",
 	"`(-Inf, -0.577)` and `(0.577, Inf)`",
 	"`(-1, 0)` and `(1, Inf)`"
@@ -234,7 +233,7 @@ Plot the function $f(x) = 3x^4 + 8x^3 - 18x^2$. Where (what $x$ value)
 is the smallest value? (That is, for which input $x$ is the output
 $f(x) as small as possible.
 
-```{results="js"}
+```
 f(x) = 3x^4 + 8x^3 - 18x^2
 val = -3;
 numericq(val, 0.25)
@@ -248,7 +247,7 @@ numericq(val, 0.25)
 
 Plot the function $f(x) = 3x^4 + 8x^3 - 18x^2$. What is the smallest value?
 
-```{results="js"}
+```
 x = -3;
 val = f(x)
 numericq(val, 10)
@@ -259,18 +258,13 @@ numericq(val, 10)
 
 Plot the function $f(x) = 3x^4 + 8x^3 - 18x^2$. When is the function increasing?
 
-```{results="js"}
+```
 choices = ["`(-Inf, -3)` and `(0, 1)`",
 	"`(-3, 0)` and `(1, Inf)`",
 	"`(-Inf, -4.1)` and `(1.455, Inf)`"
 	];
 ans=2;
 radioq(choices, ans)
-```
-
-
-```{results="html"}
-tabs.next("Asymptotes")
 ```
 
 
@@ -284,17 +278,14 @@ $q(x)=0$), horizontal (as $x$ gets large or small), or even
 slant.
 
 The vertical asymptotes require care when plotting, as the naive style
-of plotting where a collection of points is connected by straight lines
-can render poor graphs when the scale of $y$ values get too large. As
-well, the `plot` function does not handle cases where you get 
-`Inf` for an answer (values that can come up when division by 0 is possible).
-
-Keep in mind: while a graphic can highlight different features of a
-graph, it is often not possible to look at all of them on one graph.
+of plotting where a collection of points is connected by straight
+lines can render poor graphs when the scale of $y$ values get too
+large. The really large values plotted near the asymptote can wipe out
+the possibility of seeing other features of interest in a graph.
 
 
-
-Some features of a graph that are identifiable by calculus concepts are:
+Some features of interest for a graph that are identifiable by
+calculus concepts are:
 
 * zeroes
 * vertical asymptotes
@@ -322,11 +313,11 @@ asymptote at $0$.
 
 One can try a simple plot:
 
-```{results="block"}
+```
 plot(x -> 1/x, -3, 3) 
 ```
 
-The issue at $0$ is avoided, as the points chosen by `Gadfly` do not
+The issue at $0$ is avoided, as the points chosen by `Plots` do not
 include $0$. The asymptote appears as a strongly slanted line, as
 individual points are simply connected in a dot-to-dot manner.
 
@@ -335,7 +326,7 @@ that is plotted. (Alternatively, you can use `NaN` values or multiple
 functions on one.) For this example, we can easily draw the positive
 part:
 
-```{results="block"}
+```
 plot(x -> 1/x, 0, 3)
 ```
 
@@ -343,29 +334,31 @@ It is best to avoid the asymptote at $0$ completely by backing away by
 enough to avoid the large range on the $y$ axis. In this case,
 starting around $1/10$ is reasonable:
 
-```{results="block"}
+```
 plot(x -> 1/x, 1/10,  3)
 ```
 
 
 Let's look at the rational function
 
-$$
+$$~
 f(x) = \frac{(x-2)(x-3)}{x-1}
-$$
+~$$
 
 This will have a vertical asymptote at $1$, zeros at $2$ and $3$ and a slant asymptote. A quick graph from $-10$ to $10$ shows just some of this:
 
-```{results="block"}
+```
 f(x) = (x-2)*(x-3)/(x-1)
 plot(f, -10, 10)
 ```
 
-We can see the slant asymptote and the vertical asymptote, but have no chance of seeing the zeros of the local extrema. We can if we restrict our plot range.
+We can see the slant asymptote and the vertical asymptote, but have no
+chance of seeing the zeros or the local extrema. For that, we can restrict
+the domain to plot over.
 
-For example, we graph to the right of the asymptote with:
+For example, to graph to the right of the asymptote can be done with:
 
-```{results="block"}
+```
 plot(f, 1 + 0.5, 4)
 ```
 
@@ -373,7 +366,7 @@ This shows the two zeros and gives an idea of the relative
 minimum. Similarly, a plot of the left of the asymptote can be
 illustrative. Here we step back by a bit:
 
-```{results="block"}
+```
 plot(f, -3, 1 - 0.1)    
 ```
 
@@ -387,7 +380,10 @@ of a small amount and makes it huge.  Clearly we need to really avoid
 the issue. It isn't hard -- just add a little bit more to $0$.
 
 
-One solution to all avoiding this issue is to use the `trim` function that was previously defined. This just caps off really large values so that the vertical asymptotes don't affect the scale of the graph. We can see the asymptotes prety clearly with:
+One solution to avoiding this issue is to use the `trim` function that
+was previously defined. This just caps off really large values so that
+the vertical asymptotes don't affect the scale of the graph. We can
+see the asymptotes pretty clearly with:
 
 ```
 trim(f; val=10) = x -> abs(f(x)) > val ? NaN : f(x)
@@ -395,22 +391,22 @@ plot(trim(f, val=20), -10, 10)
 ```
 
 
-```{results="html"}
+```
 example("Trigonometric functions")
 ```
 
 Let
 
-$$
+$$~
 f(x) = \frac{5}{\cos x} + \frac{10}{\sin x}.
-$$
+~$$
 
 Estimate graphically the minimum value over $(0, \pi/2)$.
 
 The domain comes from the fact that $\sin(0) = 0$ and $\cos(\pi/2) =
 0$, so we will have asymptotes at each. A simple graph shows there are issues:
 
-```{results="block"}
+```
 f(x) = 5/cos(x) + 10/sin(x)
 plot(f, 0, pi/2) 
 ```
@@ -420,7 +416,7 @@ the graph when the asymptotes are drawn. To remedy, we again back off
 from the boundaries. Since $\sin(x)$ behaves like $x$ near $0$, we pick
 `delta = 0.3` again and expect a max near $10/(3/10) \approx 33$.
 
-```{results="block"}
+```
 delta = 0.3;
 plot(f, 0 + delta, pi/2 - delta) 
 ```
@@ -437,7 +433,7 @@ with issues when $2x^2 = 10$, or $x = -\sqrt{5}$ or $\sqrt{5}$.
 
 Plot this function from $-5$ to $5$. How many times does it cross the $x$ axis?
 
-```{results="js"}
+```
 val = 3;
 numericq(val, .2)
 ```
@@ -457,7 +453,7 @@ g(x) = abs(x) > 5 ? f(x) : NaN
 
 then plot `g` over $[-20, 20]$. Using algebra or this graph, estimate the slope?
 
-```{results="js"}
+```
 val = 1/2;
 numericq(val, 5e-1)
 ```
@@ -467,17 +463,12 @@ numericq(val, 5e-1)
 The rational function $f(x) = (x^2 - 3x - 2) / (x^2 - 4)$ has issues
 at $-2$ and $2$. How many times does its graph cross the $x$ axis?
 
-```{results="js"}
+```
 val = 2;
 numericq(val, 1e-16)
 ```
 
 
-
-
-```{results="html"}
-tabs.next("Arrays")
-```
 
 
 ## Arrays
@@ -488,7 +479,7 @@ called as we draw a "T" and fill in values to plot for $x$ and $y$.
 For example, a chalkboard after the instructor shows how to plot $f(x)
 = x^2$ might have this drawn on it:
 
-```{execute=false}
+```verbatim
 x |  y
 ------
 1 |  1
@@ -515,7 +506,7 @@ such is an `Array`. Arrays are implemented in most all computer
 languages, though the term can mean different things.  We are looking
 for vectors, or one-dimensional arrays.  In general, an array is a
 multidimensional grid of values -- all of the same type (integer,
-floating point, _functions_, ..., or ANY).
+floating point, *functions*, ..., or ANY).
 
 For our purposes, we want vectors (one dimensional, $n$ by 1 arrays in
 `julia`). These can be easily constructed in different ways.
@@ -556,9 +547,7 @@ vectors going forward.
 
 
 
-```{results="html"}
-note("Containers for like values...")
-```
+**Containers are for like values...**
 
 In general, `julia` uses `[` and `]' to create containers for like
 values. These containers can be more complicated than a single row or
@@ -571,18 +560,15 @@ just floating point values:
 [1, 2.0]
 ```
 
-
-
 ### Creating arithmetic sequences
 
 A basic set of numbers used in programming are the values `1`,`2`,
-..., `n`. These are the simplest example of an _arithmetic
-progression_ or sequence, which in general can start in a different
+..., `n`. These are the simplest example of an *arithmetic progression* or sequence, which in general can start in a different
 place and have steps of a size different from $1$:
 
-$$
+$$~
 a, a + h, a+2h, a+3h, ..., a + nh
-$$
+~$$
 
 It should be possible to specify arithmetic sequences either by
 
@@ -594,16 +580,21 @@ In `julia` the `linspace` function will do the former and the range
 operator the latter.
 
 Here are 5 evenly spaced numbers from $0$ to $\pi/2$ given by
-`linspace` (_linearly spaced_ numbers):
+`linspace` (*linearly spaced* numbers):
 
 ```
 linspace(0, pi/2, 5)
 ```
 
-A column vector is returned. 
+The values are not displayed, but will be if `collect`ed:
 
-The `5` above is optional -- leaving it out will specify the default
-of $100$ points:
+```
+collect(linspace(0, pi/2, 5))
+```
+
+
+The `5` above is optional -- the default
+is 50 points:
 
 ```
 linspace(0, pi/2)
@@ -621,10 +612,10 @@ the start and end values:
 
 That isn't so impressive. The description `julia` uses to show this
 value is exactly how we defined it, but this range is specifying the
-values 1, 2, 3, 4. To see that, we can put inside, `[]` to make an array:
+values 1, 2, 3, 4. To see that, we `collect` the values to make an array:
 
 ```
-[1:4]
+collect(1:4)
 ```
 
 The range operator returns a `Range` object which is much more compact
@@ -647,11 +638,11 @@ Notice, the value for `b` is treated as as suggestion, the range will stop witho
 The $x$ values for a plot are typically a sequence of increasing
 values from $a$ to $b$. We would generally like to be able to specify
 the number of values to plot. This makes `linspace` the go-to choice
-to use.  (Though `Gadfly` uses: `a:(b-a)/n:b` with `n=250`.)
+to use. 
 
 
 
-```{results="html"}
+```
 alert("""
 
 
@@ -671,7 +662,7 @@ size, which is related to how many total values are generated.
 
 Which command will produce the sequence $1,3,5,7,9,11, ..., 99$?
 
-```{results="js"}
+```
 choices=["`linspace(1, 99, 2)`",
        "`[1,3,5,7,9,11, ..., 99]`",
        "`1:2:99`",
@@ -684,7 +675,7 @@ radioq(choices, ans)
 
 Which command produces 10 numbers between 0 and 10 that are evenly spaced?
 
-```{results="js"}
+```
 choices=[
 "`linspace(0, 10, 10)`",
 "`0:10`",
@@ -700,7 +691,7 @@ radioq(choices, ans)
 Which command does not produce the numbers $1, 2, 3, 4, 5$?
 
 
-```{results="js"}
+```
 choices=[
 "`linspace(1, 5, 5)`",
 "`[1, 2, 3, 4, 5]`",
@@ -717,7 +708,7 @@ radioq(choices, ans)
 Which command does  produces the numbers $1, 1, 2, 3, 5, 8, 13$?
 
 
-```{results="js"}
+```
 choices=[
 "`[1,1,2,3,5,8,13]`",
 "`1:2:13`",
@@ -729,10 +720,6 @@ radioq(choices, ans)
 ```
 
 
-```{results="html"}
-tabs.next("Indexing")
-```
-
 
 ## Indexing
 
@@ -740,7 +727,7 @@ A column vector has a natural sense of first, second, ..., the $n$-th
 element. This allows `julia` to refer to the values by index
 ($1$-based, unlike some other computer languages). So, if `x` is an
 array, `x[1]` is the first value in that array. One can extract and
-_assign_ values using indices. A simple example is:
+*assign* values using indices. A simple example is:
 
 ```
 x = [2, 3, 5, 7, 11, 13, 17]
@@ -775,6 +762,19 @@ x[2:end]
 (But not without indexing, as you can see by typing `2:end` by itself.)
 
 
+```
+note("""**Left side of an `=` sign**: `Julia` allows only three
+different types of expressions on the left side of an equals sign:
+
+* a variable name, as in `x = 42`,
+* a function definition, as in `f(x) = x^2 - 2`, or
+* a assignment setting an index, as in `x[1] = 2`.
+
+The left side is quite unlike a math equation, where arbitray
+expressions are typical.
+""")
+```
+
 
 ### Practice
 
@@ -788,7 +788,7 @@ x = [1, 1, 2, 3, 5, 8, 13]
 
 What is the value of `x[end - 1] + x[end]`?
 
-```{results="js"}
+```
 val = x[end - 1] + x[end];
 numericq(val, 1e-16)
 ```
@@ -803,7 +803,7 @@ x = [1, 1, 2, 3, 5, 8, 13]
 
 What is the value of `x[3]`?
 
-```{results="js"}
+```
 val = x[3];
 numericq(val, 1e-16)
 ```
@@ -811,7 +811,7 @@ numericq(val, 1e-16)
 
 #### Question
 
-When a vector is created, if possible the resulting values are converted to be the same type.  Let
+When a vector is created, if possible, the resulting values are converted to be the same type.  Let
 
 ```
 x = [1, 2.0]
@@ -820,7 +820,7 @@ y = [1, 2.0, "three"]
 
 For   `x[1]` and `y[1]` what does `typeof` return?
 
-```{results="js"}
+```
 choices = ["(Float, Integer)",
 	"(Integer, Integer)",
 	"(Integer, ASCIIString)"
@@ -833,16 +833,13 @@ radioq(choices, ans)
 
 
 
-```{results="html"}
-tabs.next("Mapping")
-```
-
 
 ## Mapping <small>a function to multiple values</small>
 
 To specify the $y$ values we wish to "map" the function `f` to each
 $x$ value.  In `julia` there are many different ways to do this, we
-list four for completeness, but will restrict our attention to just the first two styles.
+list four for completeness, but will restrict our attention to just
+the first three styles.
 
 ### The map function
 
@@ -890,14 +887,46 @@ We use `u` for the dummy variable in the anonymous function, so as not
 to get it confused with the variable `x` holding our values, but this
 is not necessary.
 
+### Broadcasting
+
+`Julia` allows a function to be broadcast over a collection of values
+with a simple notational trick or inserting a "." *before* the
+parenthesis. To see, we have:
+
+```
+sin.([1,2,3])
+```
+
+In this use, the output is the same as though `map(sin, [1,2,3])` were
+called. In general, this "." notation is a bit different, as there can
+be multiple arguments passed and the size of the values is matched if
+possible by replication. For example, this command find the logarithm
+of 5 for different bases. The value 5 is replicated once for each of
+the bases:
+
+```
+log.([2,pi,5,10], 5)
+```
+
+```
+note("""
+The "dot" broadcasting is very succinct and useful, but using `map` is
+more explicit and easier to reason about. Best to start with `map` and
+if you find it being used often, transition to thinking about using
+the "dot" broadcasting.
+""")
+```
+
+
+
 ### Comprehensions
 
 Mathematicians are fond of set notation, as in this way to describe
 the $y$ values in a graph:
 
-$$
+$$~
 y = \{ f(x): x \text{ in } [0, 2] \},
-$$
+~$$
 
 This is read: "the values $f(x)$ *for* each $x$ in the interval $[0,2]$."
 
@@ -907,23 +936,18 @@ notation above. The syntax is similar:
 
 ```
 xs = linspace(0, 2.0, 5)
-[f(x) for x in xs]  ## or {f(x) for x = xs}
+[f(x) for x in xs]
 ```
 
-Square brackets are typical when using a comprehension, though curly
-braces are possible -- try it. While curly braces are more
-mathematically familiar -- they always return a container of type
-`Any`. Square brackets try to guess a better type, if possible.
 
-In this example we still get a container of type `Any` with square
-brackets. While not critical, we would really like to have this be of
+In this example we still get a container of type `Any`. While not critical, we would really like to have this be of
 type "float", as some math functions care about this
 distinction. Converting can be done a few ways:
 
-* by wrapping the entire thing in `float` (which coerces the values):
+* by converting the values with `float` (which coerces the values):
 
 ```
-float( [ f(x) for x in xs ] )
+map(float, [ f(x) for x in xs ] )
 ```
 
 * By using square brackets and declaring the type:
@@ -932,18 +956,28 @@ float( [ f(x) for x in xs ] )
 Float64[f(x) for x in xs]
 ```
 
+* Doing this inside a function, where things work a bit differently than at the command line:
+
+```
+g(xs) = [f(x) for x in xs]
+g(xs)
+```
+
 
 The two approaches, maps and comprehensions, are equally
 useful. Perhaps `map` is a bit less trouble, but comprehensions mirror
 a more familiar mathematical syntax and generalize to functions of
-more than one variable nicely. One other difference is that mapping
-requires a function, whereas comprehensions use expressions. 
+more than one variable nicely. One difference to keep in mind when
+deciding which to use, is that mapping requires a function, whereas
+comprehensions use expressions.
 
 
 
 ### For loops
 
-Next, for completeness, we mention two other means to generate vectors of numbers.
+Finally, for completeness, we mention another means to generate
+vectors of numbers that is more familiar to users of other computer
+languages.
 
 The `for` loop is a very common pattern in
 computer programming. For speed reasons, some languages (e.g.,
@@ -973,7 +1007,7 @@ function acting on the entire column vector `x`. Instead, we iterate
 one-by-one over the values of `x` saving the function values as we
 go. The use of for loops is called *imperative programming*, as you
 describe each step. The use of functions like `map` is called
-_declarative programming_ as you simply declare what you want and the
+*declarative programming* as you simply declare what you want and the
 computer language does the rest.
 
 In some languages for loops are avoided if possible, as they can be
@@ -1008,56 +1042,6 @@ We will use `while` loops when we iterate some process and are waiting
 until some computed value gets close to $0$.
 
 
-### Vectorization
-
-Finally, we note that `julia` allows for "vectorization" of
-values. That means, many functions work on an array all at once. Many
-
-```
-sin(x)
-```
-
-but not all:
-
-```
-x^2
-```
-
-The latter fails, whereas the `sin` function naturally returns the 5
-values for `x`. The reason is the definitions of multiplication,
-division and powers are mathematically different for single numbers
-(scalars) than for column vectors, or more generally matrices. Like
-`MATLAB`, `julia` chose the simplest notation to do matrix
-multiplication, powers, and division. To get element-by-element
-operations, we _prefix_ the operator with a "dot", as in `.^`:
-
-```
-x .^ 2
-```
-
-So, if we were to redefine our function $f(x)  = -16x^2 + 32x$ with:
-
-```
-f(x) = -16x.^2 + 32x
-```
-
-Then we could have simply done:
-
-```
-f(x)
-```
-
-Though this is easy to do, it is also rather tedious, as putting in
-the "dots" is, for some reason, not that intuitive, so
-mistakes are often made. (It can surprisingly, also be slower to perform.)
-
-We do use this style to generate simple values, for example here we
-step through some powers of $1/10$ without much fuss:
-
-```
-(1/10).^(1:5)
-```
-
 
 ### Example
 
@@ -1066,8 +1050,17 @@ we could do any of these:
 
 ```
 f(x) = x^2
-xs = [1:4]
+xs = 1:4
 ys = map(f, xs)
+[xs ys]                                  # integer type
+```
+
+or
+
+```
+f(x) = x^2
+xs = 1:4
+ys = f.(xs)
 [xs ys]                                  # integer type
 ```
 
@@ -1091,11 +1084,6 @@ end
 [xs ys]
 ```
 
-```
-xs = linspace(1.0, 4.0, 4)
-ys = xs.^2 
-[xs ys]                                   x# Float type, as x is here
-```
 
 The comments show that each is slightly different for technical reasons, but all display the same values.
 
@@ -1106,11 +1094,11 @@ The comments show that each is slightly different for technical reasons, but all
 
 Does this command produce the values $\{.1, .01, .001, .0001\}$?
 
-```
+```noout
 x = [(1/10)^i for i in 1:4]
 ```
 
-```{results="js"}
+```
 booleanq(true)
 ```
 
@@ -1118,21 +1106,21 @@ booleanq(true)
 
 Does this command produce the numbers $10, 100, 1000, 10 000$?
 
-```
+```noout
 map(i -> 10^i, 1:4);
 ```
 
 
-```{results="js"}
+```
 booleanq(true)
 ```
 
 #### Questions
 
-Let $f(x) = x^2 - 2x$. Which command will produce a $y$ values for plotting $f$ over $[0, 2]$?
+Let $f(x) = x^2 - 2x$. Which command will produce the $y$ values for plotting $f$ over $[0, 2]$?
 
 
-```{results="js"}
+```
 choices=[
 "`[f(x) for x in [0,2]]`",
 "`map(f(x), [0,2])`",
@@ -1146,15 +1134,12 @@ radioq(choices, ans)
 
 Will this command produce $y$ values for plotting $f(x)$ over $[0,1]$?
 
-```{hide=true}
+```noout
 f(x) = x^2 - 2x
-```
-
-```
 [f(x) for x in 0:1/100:1];
 ```
 
-```{results="js"}
+```
 booleanq(true)
 ```
 
@@ -1166,29 +1151,25 @@ Sometimes the function is used to ask a question. For example, this command answ
 [isprime(i) for i in 1:10]
 ```
 
-This shows there are 4 primes in 1 to 10. How many are there between 100 and 110?
+Showing there are 4 primes in 1 to 10. How many primes are there between 100 and 110?
 
-```{results="js"}
+```
 p = [isprime(i) for i in 100:110];
 val = sum(p);
 numericq(val, 1e-16)
 ```
 
-(It is easier to write `map(isprime, 1:10)` in this case.)
+(It is easier to write `map(isprime, 1:10)` in this case, which leads to `filter(isprime, 1:10)`.)
 
 
-
-```{results="html"}
-tabs.next("Making graphs")
-```
 
 ## Graphing points connected with lines
 
 If one has two vectors `xvals` and `yvals` of equal size then creating
 a graphic for them is straightforward. The basic syntax is
 
-```{execute=false}
-plot(x=xvals, y=yvals, Geom.line)
+```verbatim
+plot(xvals, yvals)
 ```
 
 For example, to plot $y=x^2$ over $[-1,1]$ we might do:
@@ -1197,31 +1178,20 @@ For example, to plot $y=x^2$ over $[-1,1]$ we might do:
 f(x) = x^2
 xs = linspace(-1, 1)
 ys = map(f, xs)
-plot(x=xs, y=ys, Geom.line)
+plot(xs, ys)
 ``` 
 
-`Gadfly` uses values like `Geom.line` and `Geom.point` to express how
-the data is to be rendered. In the above call the use of `Geom.line`
-gives instructions to draw lines between the points. Had (the default)
-value `Geom.point` been specified points would have been drawn. 
 
-
-One can place both to get both points and lines. This example
-illustrates that and shows what happens when not enough points are used
-to construct a graph:
-
+One can place both to get both points and lines. The `scatter` function will plot the points, but not connect the lines. In the following, the `scatter!` function is used. (Not the `!` at the end.) This form adds the plot of the lines to the last graph, rather than make a new one.
 
 ```
 xs = linspace(-2, 2, 5)
 ys = map(f, xs)
-plot(x=xs, y=ys, Geom.line, Geom.point)
+plot(xs, ys)
+scatter!(xs, ys, markersize=5)
 ```
 
 
-
-```{results="html"}
-tabs.next("Multiple functions")
-```
 
 ## Two functions at once
 
@@ -1231,14 +1201,14 @@ make a vector of functions and hand this off to `plot`.
 
 For example, to graph both the sine and cosine function we have:
 
-```{results="block"}
+```
 plot([sin, cos], 0, 2pi) 
 ```
 
 
 Or to compare the effects of a simple transformation:
 
-```{results="block"}
+```
 f(x) = x^2
 g(x) = 15 + f(x-3)
 plot([f, g], -10, 10)
@@ -1246,21 +1216,32 @@ plot([f, g], -10, 10)
 
 To print a heavier $x$-axis, we can graph the function $y=0$, specified through the anonymous function `x -> 0`:
 
-```{results="block"}
+```
 f(x) = x^2 - 2
 plot([f, x -> 0], -2, 2)
 ```
 
+With `Plots`, it is also possible to use the mutating form `plot!` to add a graph to the current graph. The above, may also be done with:
+
+```
+plot(f, -2, 2)
+plot!(zero, -2, 2)   # zero is a function returning 0, useful for programming in general.
+```
 
 
-```{results="html"}
+
+```
 example("Operators, aka. derived functions")
 ```
 
-Often we wish to plot a function derived from another function. For example, this is used to add a secant line to a graph. The following function will create a function which represents the secant line of $f(x)$ between two points, $a$ and $b$:
+Often we wish to plot a function derived from another function. For
+example, this is used to add a secant line to a graph. The following
+function (which is in the `MTH229` package) will create a function
+which represents the secant line of $f(x)$ between two points, $a$ and
+$b$:
 
-```
-function secline(f, a, b)
+```verbatim
+function secant(f, a, b)
 	 m =  (f(b) - f(a)) / (b-a)	# slope of secant line
 	 x -> f(a) + m * (x - a)	
 end
@@ -1271,7 +1252,7 @@ simply finds the slope between the two points $(a,f(a))$ and
 $(b,f(b))$. The second does something with the point-slope form of a
 line using the point $(a, f(a))$. The tricky part is that last line
 defines an anonymous function to be returned (the `x ->` part). So
-`secline` is an *operator* -- a function which accepts a function for
+`secant` is an *operator* -- a function which accepts a function for
 an argument and returns a function.
 
 Using this function makes it simple to add a secant line to a graph. 
@@ -1279,19 +1260,10 @@ Using this function makes it simple to add a secant line to a graph.
 ```
 f(x) = sin(x)
 a, b = 0, pi/2
-plot([f, secline(f, a, b)], a, b)
+plot(f, a, b)
+plot!(secant(f, a, b))
 ```
 
-```{results="html"}
-alert("""
-
-The last command might look complicated, as "a" and "b" are specified
-twice, but this is because we are *composing* two operations at once:
-one to create a secant line function and one to make a plot. Both need
-a specification of an "a" and "b".
-
-""")
-```
 
 
 ### Practice
@@ -1301,14 +1273,14 @@ a specification of an "a" and "b".
 Define $f(x)$ to be a triangular function as follows:
 
 ```
-f(x) = abs(x) > 1 ? 0.0 : 1.0 - abs(x)
+f(x) = max(0, 1.0 - abs(x))
 ```
 
 In many applications, the following transformation is employed:
 
-$$
+$$~
 g(x, c, h) = \frac{1}{h} f(\frac{x - c}{h})
-$$
+~$$
 
 For constants $h$ and $c$.
 
@@ -1316,7 +1288,7 @@ Make a graph of both $f(x)$ and $g(x, 1, 1/2)$ over the interval $[-2,3]$. Consu
 
 
 
-```{results="js"}
+```
 choices = ["The graph of g is centered at c=1 and has maximum height h=1/2",
 	   "The graph of g is centered at c=1 and has area h=1/2",
 	   "The graph of g is centered at c=1 and has area 1/h=2",
@@ -1331,14 +1303,14 @@ radioq(choices, ans)
 
 We saw that this command will produce two graphs:
 
-```{results="block"}
-plot([sin, x -> cos(x) > 0 ? 0 : NaN], 0, 2pi)
+```
+plot([sin, x -> cos(x) > 0 ? 0.0 : NaN], 0, 2pi)
 ```
 
 What is the sine curve doing when the flat line is drawn?
 
 
-```{results="js"}
+```
 choices = ["Oscillating: Going up and down",
 	   "Only decreasing",
 	   "Only increasing",
@@ -1356,18 +1328,15 @@ Make a graph of $f(x) = x$, $g(x) = \tan(x)$, and $h(x) =
 the following below seems correct?
 
 
-```{results="js"}
+```
 choices = [
-	"f < g < h",
-	"g < f < h",
-	"h < f < g",
-	"h < g < f"
+	L"f < g < h",
+	L"g < f < h",
+	L"h < f < g",
+	L"h < g < f"
 	   ];
 ans = 3;
 radioq(choices, ans)
 ```
 
 
-```{results="html"}
-tabs.finish()
-```
